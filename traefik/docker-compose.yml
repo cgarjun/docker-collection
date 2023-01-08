@@ -1,0 +1,59 @@
+//
+//my docker-compose.yml
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.5
+    container_name: traefik
+    security_opt:
+      - no-new-privileges:true
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 80:80
+      - 443:443
+    command:
+      ###########################################
+      #   Static Configuration harnessing CLI   #
+      ###########################################
+
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=proxy
+      - --entrypoints.webinsecure.address=:80
+      - --entrypoints.webinsecure.http.redirections.entrypoint.to=websecure
+      - --entrypoints.webinsecure.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+    networks:
+      - proxy
+
+    labels:
+      ########################################################
+      #   Dynamic configuration with Docker Label for APPs   #
+      ########################################################
+
+      traefik.enable: true
+      traefik.http.routers.traefik.rule: Host(`traefik.myhost.local`)
+      traefik.http.routers.traefik.service: api@internal
+      traefik.http.routers.traefik.tls: true
+      traefik.http.routers.traefik.entrypoints: websecure
+      
+  my-test-app:
+    image: containous/whoami
+    networks:
+      - proxy
+    labels:
+      ########################################################
+      #   Dynamic configuration with Docker Label for APPs   #
+      ########################################################
+      traefik.enable: true
+      traefik.http.routers.whoami.rule: Host(`whoami.myhost.local`)
+      traefik.http.routers.whoami.tls: true
+      traefik.http.routers.whoami.entrypoints: websecure
+
+networks:
+  proxy:
+    external: true
