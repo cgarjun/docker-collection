@@ -1,0 +1,25 @@
+version: '3.7'
+
+services:
+  traefik:
+    image: traefik:v2.5
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.swarmMode=true"
+      - "--entryPoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  myservice:
+    image: myservice:latest
+    deploy:
+      replicas: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.myservice.rule=PathPrefix(`/myservice`)"
+      - "traefik.http.routers.myservice.entrypoints=web"
+      - "traefik.http.services.myservice.loadbalancer.server.port=11034"
+      - "traefik.http.services.myservice.loadbalancer.weights=5,3,2"
